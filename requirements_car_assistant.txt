@@ -1,0 +1,31 @@
+# Voice Car Assistant Dependencies
+# Cross-platform compatible (Windows, macOS, Linux)
+
+# Speech Recognition - faster-whisper
+faster-whisper>=1.0.0
+
+# Audio Processing (cross-platform)
+sounddevice>=0.4.6
+numpy>=1.24.3
+scipy>=1.11.1
+
+# LLM Integration
+langchain-ollama>=0.1.0
+langchain-core>=0.1.0
+httpx>=0.27
+openai>=1.0.0
+
+# UI and utilities
+rich>=13.7.1
+
+# Chinese text processing
+jieba>=0.42.1
+
+# VAD - Voice Activity Detection
+silero-vad>=4.0.0
+onnxruntime>=1.16.0
+
+# Audio backend for Windows compatibility
+pyaudio>=0.2.11; platform_system == "Windows"
+# Additional Windows audio support
+pyaudio>=0.2.11; sys_platform == "win32"
