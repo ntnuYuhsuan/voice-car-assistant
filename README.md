@@ -16,7 +16,7 @@
 ### 最低配置
 - **作業系統**: Windows 10+ / macOS 15+
 - **記憶體**: 8GB RAM (建議 16GB)
-- **存儲空間**: 10GB 可用空間
+- **存儲空間**: 10GB+
 - **麥克風**: 標準麥克風設備
 
 ### 建議配置
@@ -34,15 +34,7 @@ cd voice-car-assistant
 
 ### 2. 設置虛擬環境
 
-#### macOS 用戶
 ```bash
-conda create -n car-assistant python=3.11
-conda activate car-assistant
-pip install -r requirements_car_assistant.txt
-```
-
-#### Windows 用戶
-```cmd
 conda create -n car-assistant python=3.11
 conda activate car-assistant
 pip install -r requirements_car_assistant.txt
@@ -53,13 +45,13 @@ faster-whisper 會根據指定的模型參數自動下載模型檔案：
 
 | 模型大小 | 檔案大小 | GPU記憶體(VRAM) | CPU記憶體(RAM) | 相對速度 | 適用場景 |
 |---------|---------|----------------|----------------|----------|----------|
-| tiny    | 39 MB   | ~500 MB        | ~1 GB          | ~32x     | 快速測試、資源受限環境 |
-| base    | 74 MB   | ~700 MB        | ~1 GB          | ~16x     | 輕量級應用、即時轉錄 |
-| small   | 244 MB  | ~1.5 GB        | ~2 GB          | ~6x      | 一般用途、平衡性能 |
-| medium  | 769 MB  | ~2.5 GB        | ~3 GB          | ~2x      | 中等準確度需求 |
-| large   | 1550 MB | ~4.7 GB        | ~4 GB          | 1x       | 高準確度、生產環境 |
+| tiny    | 39 MB   | ~500 MB        | ~1 GB          | ~32x     | 最快 |
+| base    | 74 MB   | ~700 MB        | ~1 GB          | ~16x     | 輕量級應用 |
+| small   | 244 MB  | ~1.5 GB        | ~2 GB          | ~6x      | 平衡性能 |
+| medium  | 769 MB  | ~2.5 GB        | ~3 GB          | ~2x      | 中文可用 |
+| large   | 1550 MB | ~4.7 GB        | ~4 GB          | 1x       | 生產環境 GPU |
 
-*基準測試環境：RTX 3070 Ti 8GB，13分鐘音檔*
+*official基準測試環境：RTX 3070 Ti 8GB，13分鐘音檔*
 
 ### 4. 安裝和設置 Ollama
 
@@ -79,7 +71,7 @@ ollama serve
 ```
 4. 開啟新的終端視窗下載模型：
 ```cmd
-ollama pull qwen2.5:3b
+ollama pull gpt-oss:20b
 ```
 
 詳細的 Ollama 使用指南請參考 [OLLAMA_GUIDE.md](OLLAMA_GUIDE.md)
@@ -90,19 +82,14 @@ ollama pull qwen2.5:3b
 
 | 參數 | 預設值 | 說明 |
 |------|--------|------|
-| `--whisper-model` | `base` | Whisper 模型大小 (tiny/base/small/medium/large) |
-| `--ollama-model` | `qwen2.5:3b` | Ollama 模型名稱 |
+| `--whisper-model` | `medium` | Whisper 型號 (tiny/base/small/medium/large) |
+| `--ollama-model` | `gemma3:latest` | Ollama 模型名稱 |
 | `--use-openai` | `False` | 是否啟用 OpenAI API |
-| `--openai-model` | `gpt-4o-mini` | OpenAI 模型名稱 |
 
 ### 執行指令範例
 
 #### 基本執行
 ```bash
-# macOS / Linux
-python car_assistant.py
-
-# Windows
 python car_assistant.py
 ```
 
@@ -113,7 +100,7 @@ python car_assistant.py --whisper-model medium
 
 #### 指定 Ollama 模型
 ```bash
-python car_assistant.py --ollama-model gemma2:latest
+python car_assistant.py --ollama-model gemma3:latest
 ```
 
 #### 啟用 OpenAI API
@@ -130,9 +117,9 @@ set OPENAI_API_KEY=your_api_key_here
 python car_assistant.py --use-openai
 ```
 
-#### 完整參數組合
+#### 完整command
 ```bash
-python car_assistant.py --whisper-model medium --ollama-model gemma2:latest --use-openai --openai-model gpt-4o-mini
+python car_assistant.py --whisper-model medium --ollama-model gemma3:latest --use-openai
 ```
 
 ### 💡 快速啟動指南
@@ -161,10 +148,10 @@ python car_assistant.py --whisper-model medium --ollama-model gemma2:latest --us
 ### 🎵 娛樂控制
 - "播放音樂" / "暫停音樂"
 - "下一首歌" / "上一首"
-- "播放周杰倫的歌"
+- "播放頑童的歌"
 
 ### 📞 通訊功能
-- "撥打電話給小明"
+- "撥打電話給XX"
 - "發送訊息給媽媽說我快到了"
 
 ### 🚘 車輛資訊
@@ -178,12 +165,6 @@ python car_assistant.py --whisper-model medium --ollama-model gemma2:latest --us
 1. 開啟 **設定** → **隱私權** → **麥克風**
 2. 確保 **允許應用程式存取您的麥克風** 已開啟
 3. 允許 **命令提示字元** 或 **PowerShell** 使用麥克風
-
-### CUDA 加速 (選用)
-如果您有 NVIDIA GPU，可以安裝 CUDA 版本的依賴：
-```cmd
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-```
 
 ### 常見問題排解
 

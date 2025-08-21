@@ -18,16 +18,14 @@ ollama serve
 ollama pull qwen2.5:3b
 
 # 下載其他模型
-ollama pull qwen2.5:7b
-ollama pull qwen2.5:14b
-ollama pull gemma2:2b
-ollama pull gemma2:9b
+ollama pull qwen3:4b
+ollama pull gemma3:270m
 ollama pull llama3.1:8b
 ```
 
 ### 查看已安裝的模型
 ```bash
-ollama list
+ollama ls
 ```
 
 ### 移除模型
@@ -37,19 +35,17 @@ ollama rm qwen2.5:3b
 
 ### 測試模型
 ```bash
-ollama run qwen2.5:3b
+ollama run gpt-oss:20b
 ```
 
-## 常用模型規格
+## 模型規格參考
 
-| 模型名稱 | 參數量 | 記憶體需求 | 適用場景 |
-|----------|--------|------------|----------|
-| qwen2.5:1.5b | 1.5B | ~2GB | 輕量級應用 |
-| qwen2.5:3b | 3B | ~4GB | 平衡性能與資源 |
-| qwen2.5:7b | 7B | ~8GB | 高品質回答 |
-| qwen2.5:14b | 14B | ~16GB | 最佳性能 |
-| gemma2:2b | 2B | ~3GB | Google 模型 |
-| llama3.1:8b | 8B | ~10GB | Meta 模型 |
+NAME             ID              SIZE      MODIFIED    
+gemma3:270m      b16d6d39dfbd    241 MB    6 days ago     
+qwen3:4b         e55aed6fe643    2.5 GB    13 days ago    
+gemma3:latest    a2af6cc3eb7f    3.3 GB    13 days ago    
+gpt-oss:20b      f2b8351c629c    13 GB     2 weeks ago    
+qwen2.5:3b       357c53fb659c    1.9 GB    2 weeks ago    
 
 ## 服務管理
 
