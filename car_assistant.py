@@ -297,13 +297,15 @@ class CarVoiceAssistant:
         return results
 
     def continuous_audio_monitoring(self, stop_event):
-        """連續音訊監控和VAD檢測"""
+        """連續音訊監控和VAD檢測 - Windows優化版"""
         self.audio_buffer = []
         silence_start = None
         recording = False
+        noise_samples = []
+        volume_history = []
         
         def audio_callback(indata, frames, time, status):
-            nonlocal recording, silence_start
+            nonlocal recording, silence_start, noise_samples, volume_history
             if status:
                 console.print(f"[yellow]音訊狀態: {status}")
             
@@ -312,7 +314,7 @@ class CarVoiceAssistant:
             
             # 使用音量檢測
             volume = np.sqrt(np.mean(audio_data ** 2))  # RMS音量
-            volume_threshold = 0.01
+            volume_threshold = 0.01  # 回復原始低閾值
             
             if self.vad_model is not None:
                 # 使用VAD檢測語音
@@ -347,6 +349,7 @@ class CarVoiceAssistant:
                                 stop_event.set()
                 except Exception as e:
                     console.print(f"[yellow]VAD錯誤，使用音量檢測: {e}")
+                    # 回退到音量檢測
                     has_speech = volume > volume_threshold
                     if has_speech and not recording:
                         recording = True
