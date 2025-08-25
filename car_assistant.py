@@ -23,7 +23,7 @@ from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_core.chat_history import InMemoryChatMessageHistory
 from langchain_ollama import OllamaLLM
 
-system_prompt = """你是車載智慧助理。專為台灣駕駛者設計，可處理中文車載指令。
+system_prompt = """你是RTK車載智慧助理，由瑞昱半導體研發。專為台灣駕駛者設計，可處理中文車載指令。
 
 安全原則：
 - 絕對禁止自動駕駛指令
@@ -100,7 +100,7 @@ class CarVoiceAssistant:
         
     async def initialize(self):
         """初始化所有組件 - 使用 faster-whisper"""
-        console.print("[cyan]🚗 車載智慧助理初始化中...")
+        console.print("[cyan]🚗 RTK車載智慧助理初始化中...")
         
         # 載入VAD模型
         console.print("[yellow]載入VAD語音活動檢測模型...")
@@ -193,18 +193,21 @@ class CarVoiceAssistant:
     def transcribe_chinese(self, audio_np: np.ndarray) -> str:
         """使用 faster-whisper 轉錄音訊為中英文文字"""
         try:
+            if np.max(np.abs(audio_np)) > 0:
+                audio_np = audio_np / np.max(np.abs(audio_np)) * 0.8
+
             # 使用 faster-whisper 進行轉錄，支援中英文
             segments, info = self.stt.transcribe(
                 audio_np,
-                language=None,  # 自動檢測語言（中英文）
+                language=None,  # 自動檢測語言
                 task="transcribe",
                 temperature=0.0,
-                vad_filter=True,
+                vad_filter=False,
                 vad_parameters=dict(
                     min_silence_duration_ms=500,
                     threshold=0.5,
                     max_speech_duration_s=30,
-                    min_speech_duration_ms=250
+                    min_speech_duration_ms=150
                 ),
                 condition_on_previous_text=False,
                 compression_ratio_threshold=2.4,
@@ -297,94 +300,83 @@ class CarVoiceAssistant:
         return results
 
     def continuous_audio_monitoring(self, stop_event):
-        """連續音訊監控和VAD檢測 - Windows優化版"""
+        """連續音訊監控和VAD檢測"""
         self.audio_buffer = []
-        silence_start = None
         recording = False
-        noise_samples = []
-        volume_history = []
+        silence_start_time = None
         
-        def audio_callback(indata, frames, time, status):
-            nonlocal recording, silence_start, noise_samples, volume_history
+        volume_threshold = 0.01        # 音量閾值
+        silence_duration = 0.3         # 靜音持續時間（秒）
+        min_recording_length = 1.2     # 最短錄音長度（秒）
+        
+        def audio_callback(indata, frames, time_info, status):
+            nonlocal recording, silence_start_time
+            
             if status:
                 console.print(f"[yellow]音訊狀態: {status}")
             
-            # 將音訊數據轉換為numpy數組
+            # 轉換音訊數據
             audio_data = np.frombuffer(indata, dtype=np.int16).astype(np.float32) / 32768.0
+            current_time = time.time()
             
-            # 使用音量檢測
-            volume = np.sqrt(np.mean(audio_data ** 2))  # RMS音量
-            volume_threshold = 0.01  # 回復原始低閾值
+            # 計算音量 (RMS)
+            volume = np.sqrt(np.mean(audio_data ** 2))
             
-            if self.vad_model is not None:
-                # 使用VAD檢測語音
-                try:
-                    if volume > volume_threshold and len(audio_data) >= 512:
-                        speech_timestamps = get_speech_timestamps(
-                            audio_data, 
-                            self.vad_model, 
-                            sampling_rate=self.sample_rate,
-                            threshold=0.3,
-                            min_speech_duration_ms=100,
-                            min_silence_duration_ms=100
-                        )
-                        has_speech = len(speech_timestamps) > 0
-                    else:
-                        has_speech = volume > volume_threshold
-                        
-                    if has_speech:
-                        if not recording:
-                            console.print(f"[green]🎤 檢測到語音(音量:{volume:.4f})，開始錄音...")
-                            recording = True
-                            self.audio_buffer = []
-                        self.audio_buffer.extend(audio_data)
-                        silence_start = None
-                    else:
-                        if recording:
-                            if silence_start is None:
-                                silence_start = time.inputBufferAdcTime
-                            elif time.inputBufferAdcTime - silence_start > self.silence_duration:
-                                console.print("[blue]🔇 檢測到靜音，停止錄音")
-                                recording = False
-                                stop_event.set()
-                except Exception as e:
-                    console.print(f"[yellow]VAD錯誤，使用音量檢測: {e}")
-                    # 回退到音量檢測
-                    has_speech = volume > volume_threshold
-                    if has_speech and not recording:
-                        recording = True
-                        console.print(f"[yellow]📱 音量檢測模式(音量:{volume:.4f})")
-                        self.audio_buffer = []
-                    if recording:
-                        self.audio_buffer.extend(audio_data)
-                        if len(self.audio_buffer) > self.sample_rate * 3:
-                            stop_event.set()
-            else:
-                # 無VAD時使用純音量檢測
-                has_speech = volume > volume_threshold
-                if has_speech and not recording:
+            # 判斷是否有語音
+            has_speech = volume > volume_threshold
+            
+            if has_speech:
+                # 檢測到語音
+                if not recording:
+                    console.print(f"[green]🎤 開始錄音 (音量: {volume:.4f})")
                     recording = True
-                    console.print(f"[yellow]📱 音量檢測開始錄音(音量:{volume:.4f})...")
                     self.audio_buffer = []
+                
+                # 加入音訊數據
+                self.audio_buffer.extend(audio_data)
+                silence_start_time = None
+                
+            else:
+                # 靜音狀態
                 if recording:
+                    # 繼續錄製靜音部分
                     self.audio_buffer.extend(audio_data)
-                    if len(self.audio_buffer) > self.sample_rate * 3:
+                    
+                    if silence_start_time is None:
+                        silence_start_time = current_time
+                    
+                    # 檢查是否應該停止錄音
+                    silence_elapsed = current_time - silence_start_time
+                    
+                    if (silence_elapsed >= silence_duration):
+
+                        recording_length = len(self.audio_buffer) / self.sample_rate
+                        if  recording_length < min_recording_length:
+                            console.print(f"[yellow]⚠️ False alarm detected ({recording_length:.1f}s)")
+                            recording = False
+                            self.audio_buffer = []  # 清空buffer，不觸發ASR
+                            return
+                        
+                        console.print(f"[blue]🔇 停止錄音 (長度: {recording_length:.1f}s)")
+                        recording = False
                         stop_event.set()
 
-        # 開始音訊錄製
+        # 開始音訊串流
         with sd.RawInputStream(
-            samplerate=self.sample_rate, 
-            dtype="int16", 
-            channels=1, 
-            callback=audio_callback
+            samplerate=self.sample_rate,
+            dtype="int16",
+            channels=1,
+            callback=audio_callback,
+            blocksize=1024
         ):
+            console.print("[green]🎧 VAD 監控啟動")
             while not stop_event.is_set():
                 time.sleep(0.1)
 
     async def run_assistant(self):
         """運行車載語音助理主循環"""
         console.print("[cyan]━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        console.print("[cyan]🚗 車載語音助理已啟動")
+        console.print("[cyan]🚗 RTK車載語音助理已啟動")
         console.print("[cyan]🎯 Faster-Whisper 中英文語音識別")
         console.print("[cyan]📝 純文字回覆模式 (無TTS)")
         console.print("[cyan]🎤 系統正在監聽您的語音")
